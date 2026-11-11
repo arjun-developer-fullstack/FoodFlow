@@ -1,0 +1,2 @@
+com.foodflow.platform.autoconfigure.FoodflowWebAutoConfiguration
+com.foodflow.platform.autoconfigure.FoodflowSecurityAutoConfiguration

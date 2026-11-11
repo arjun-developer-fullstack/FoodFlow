@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FoodFlow platform starter for servlet (Spring MVC) services.
+
+  Auto-configures cross-cutting concerns so every service behaves the same way:
+    * RFC 9457 problem-detail error handling and the domain exception model
+    * Correlation-id propagation (X-Correlation-Id) into MDC and responses
+    * JWT resource-server building blocks (roles mapping, issuer/audience validation,
+      problem-detail 401/403 responses)
+    * Transactional outbox writer + Kafka relay (PostgreSQL), opt-in via foodflow.outbox.enabled
+
+  Kafka, JDBC and Avro are optional: a service enables a feature by adding the dependency.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.foodflow</groupId>
+        <artifactId>foodflow-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../foodflow-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>foodflow-platform-starter</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>foodflow-platform-starter</name>
+    <description>Cross-cutting auto-configuration for FoodFlow servlet services</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.foodflow</groupId>
+            <artifactId>foodflow-platform-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <!-- Optional features -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.foodflow</groupId>
+            <artifactId>foodflow-event-contracts</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

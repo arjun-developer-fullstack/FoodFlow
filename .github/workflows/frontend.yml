@@ -1,0 +1,53 @@
+name: frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - frontend/**
+      - .github/workflows/frontend.yml
+  pull_request:
+    paths:
+      - frontend/**
+      - .github/workflows/frontend.yml
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: lint, typecheck, test & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # pnpm version is pinned by "packageManager" in frontend/package.json
+      - name: Enable pnpm via corepack
+        run: corepack enable
+
+      # --frozen-lockfile: CI installs exactly the reviewed dependency tree
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm verify
+
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: customer-web-dist
+          path: frontend/apps/customer-web/dist/
+          retention-days: 14

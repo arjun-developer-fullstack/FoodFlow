@@ -1,0 +1,121 @@
+# user-service configuration.
+#
+# No credentials or secrets live in this file. Every environment supplies them through environment
+# variables (Kubernetes Secrets synced from AWS Secrets Manager). For local development activate the
+# "local" profile (application-local.yaml), which reads them from the git-ignored infra/docker/.env.
+
+spring:
+  application:
+    name: user-service
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME}
+    password: ${USER_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${USER_DB_POOL_SIZE:10}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only verifies that entities match it
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.apicurio.registry.serde.avro.AvroKafkaSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        linger.ms: 5
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 12000
+        max.block.ms: 5000
+        # Apicurio Registry (ADR-0005): one artifact per record type (several event types share a topic)
+        apicurio.registry.url: ${SCHEMA_REGISTRY_URL}
+        apicurio.registry.artifact-resolver-strategy: io.apicurio.registry.serde.avro.strategy.RecordIdStrategy
+        # Do NOT set apicurio.registry.find-latest: the serializer would write with the registry's
+        # latest schema instead of the record's own, corrupting events during rolling deployments.
+        # Without it the schema is resolved by content, so writer schema == compiled class.
+        # Production registers schemas from CI; auto-registration is for local development only
+        apicurio.registry.auto-register: ${SCHEMA_REGISTRY_AUTO_REGISTER:false}
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+  # Trust X-Forwarded-* only from internal proxies (Tomcat RemoteIpValve defaults: private networks)
+  forward-headers-strategy: native
+  error:
+    include-stacktrace: never
+    include-message: never
+
+foodflow:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER}
+      audience: ${JWT_AUDIENCE:foodflow-api}
+  auth:
+    access-token-ttl: ${ACCESS_TOKEN_TTL:15m}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:14d}
+    lockout:
+      max-failed-attempts: 5
+      duration: 15m
+    cookie:
+      name: ff_refresh
+      path: /api/v1/auth
+      secure: ${REFRESH_COOKIE_SECURE:true}
+    keys:
+      # PKCS#8 PEM of the active RS256 signing key, e.g. file:/var/run/secrets/foodflow/jwt/private.pem
+      private-key-location: ${JWT_PRIVATE_KEY_LOCATION:}
+      # Comma-separated X.509 PEM public keys of retired signing keys (kept until their tokens expire)
+      previous-public-key-locations: ${JWT_PREVIOUS_PUBLIC_KEY_LOCATIONS:}
+      allow-ephemeral: false
+  outbox:
+    enabled: true
+    # must exceed spring.kafka.producer delivery.timeout.ms (12s)
+    send-timeout: 15s
+
+springdoc:
+  # Off unless explicitly enabled (local profile, tests, non-production environments)
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${OPENAPI_ENABLED:false}
+  writer-with-order-by-keys: true
+  default-produces-media-type: application/json
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+    export:
+      enabled: ${TRACING_EXPORT_ENABLED:false}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTLP_TRACING_ENDPOINT:http://localhost:4318/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTLP_METRICS_ENABLED:false}
+        url: ${OTLP_METRICS_URL:http://localhost:4318/v1/metrics}
+
+logging:
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-},%X{correlationId:-}] "
+  # Set LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs in deployed environments for JSON logs (ADR-0009)

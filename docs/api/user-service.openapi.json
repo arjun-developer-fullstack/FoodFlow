@@ -1,0 +1,1078 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "description" : "Identity, authentication and profiles.\n\n* Access tokens are RS256 JWTs (15 min) verified via `/.well-known/jwks.json`.\n* Refresh tokens are rotated on every use and only travel in an HttpOnly cookie.\n* Errors are RFC 9457 problem details with a stable `code` and a `correlationId`.\n",
+    "title" : "FoodFlow User Service API",
+    "version" : "v1"
+  },
+  "servers" : [ {
+    "url" : "http://localhost",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "description" : "User administration (role ADMIN)",
+    "name" : "Admin: Users"
+  }, {
+    "description" : "Sign-up, sign-in and session management",
+    "name" : "Authentication"
+  }, {
+    "description" : "The signed-in user's own profile",
+    "name" : "Profile"
+  }, {
+    "description" : "Token verification keys",
+    "name" : "Keys"
+  }, {
+    "description" : "The signed-in user's delivery addresses",
+    "name" : "Addresses"
+  } ],
+  "paths" : {
+    "/.well-known/jwks.json" : {
+      "get" : {
+        "operationId" : "jwks",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : { }
+                }
+              },
+              "application/jwk-set+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : { }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Public signing keys (JWKS)",
+        "tags" : [ "Keys" ]
+      }
+    },
+    "/api/v1/admin/users" : {
+      "get" : {
+        "description" : "Newest first",
+        "operationId" : "search",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          }
+        }, {
+          "in" : "query",
+          "name" : "emailPrefix",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 254,
+            "minLength" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "maximum" : 10000,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAdminUserResponse"
+                }
+              }
+            },
+            "description" : "Page of users"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Caller is not an administrator"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Search users",
+        "tags" : [ "Admin: Users" ]
+      }
+    },
+    "/api/v1/admin/users/{userId}/status" : {
+      "patch" : {
+        "description" : "Suspension revokes all of the user's sessions",
+        "operationId" : "changeStatus",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        }, {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminUserResponse"
+                }
+              }
+            },
+            "description" : "Updated user"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Unknown user"
+          },
+          "422" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Admins cannot change their own status (code CANNOT_CHANGE_OWN_STATUS)"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Activate or suspend a user",
+        "tags" : [ "Admin: Users" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "Signed in",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "Rotating refresh token (HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth)",
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Invalid e-mail or password (code INVALID_CREDENTIALS)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Account suspended (code ACCOUNT_SUSPENDED)"
+          },
+          "423" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Temporarily locked after repeated failures (code ACCOUNT_LOCKED)",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds until the lock expires",
+                "style" : "simple"
+              }
+            }
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Password verification is saturated (code AUTHENTICATION_BUSY); retry shortly"
+          }
+        },
+        "summary" : "Sign in with e-mail and password",
+        "tags" : [ "Authentication" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "description" : "Revokes the session family of the refresh-token cookie. Idempotent.",
+        "operationId" : "logout",
+        "parameters" : [ {
+          "description" : "Rotating refresh token (HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth)",
+          "in" : "cookie",
+          "name" : "ff_refresh"
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Signed out; cookie cleared"
+          }
+        },
+        "summary" : "Sign out",
+        "tags" : [ "Authentication" ]
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "description" : "Single use: the cookie is rotated on every call. Replaying an old refresh token revokes all sessions that descend from the same sign-in.",
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "description" : "Rotating refresh token (HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth)",
+          "in" : "cookie",
+          "name" : "ff_refresh",
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "New access token; refresh cookie rotated"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Missing, expired, revoked or reused refresh token (code INVALID_REFRESH_TOKEN); the cookie is cleared, except for a token rotated moments ago (a concurrent request already received its successor)"
+          }
+        },
+        "summary" : "Exchange the refresh-token cookie for a new access token",
+        "tags" : [ "Authentication" ]
+      }
+    },
+    "/api/v1/auth/register" : {
+      "post" : {
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "Account created; signed in",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "Rotating refresh token (HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth)",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Invalid input"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "E-mail already registered (code EMAIL_ALREADY_REGISTERED)"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Password verification is saturated (code AUTHENTICATION_BUSY); retry shortly"
+          }
+        },
+        "summary" : "Register a new account and sign in",
+        "tags" : [ "Authentication" ]
+      }
+    },
+    "/api/v1/users/me" : {
+      "get" : {
+        "operationId" : "me",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description" : "Profile"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Missing or invalid access token"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Get my profile",
+        "tags" : [ "Profile" ]
+      },
+      "patch" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description" : "Updated profile"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Invalid input"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Phone used by another account (code PHONE_ALREADY_IN_USE)"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Update my profile",
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/api/v1/users/me/addresses" : {
+      "get" : {
+        "description" : "Default address first, then oldest first",
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AddressResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "List my addresses",
+        "tags" : [ "Addresses" ]
+      },
+      "post" : {
+        "description" : "The first address automatically becomes the default",
+        "operationId" : "create",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddressRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AddressResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Invalid input"
+          },
+          "422" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Address limit reached (code ADDRESS_LIMIT_EXCEEDED)"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Add an address",
+        "tags" : [ "Addresses" ]
+      }
+    },
+    "/api/v1/users/me/addresses/{addressId}" : {
+      "delete" : {
+        "description" : "If it was the default, the oldest remaining one becomes default",
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        }, {
+          "in" : "path",
+          "name" : "addressId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "No such address for this user"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Delete an address",
+        "tags" : [ "Addresses" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "jwt",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Jwt"
+          }
+        }, {
+          "in" : "path",
+          "name" : "addressId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddressRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AddressResponse"
+                }
+              }
+            },
+            "description" : "Updated"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "No such address for this user"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Replace an address",
+        "tags" : [ "Addresses" ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "AddressRequest" : {
+        "type" : "object",
+        "properties" : {
+          "city" : {
+            "type" : "string",
+            "example" : "London",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "country" : {
+            "type" : "string",
+            "description" : "ISO 3166-1 alpha-2",
+            "example" : "GB",
+            "minLength" : 1,
+            "pattern" : "^[A-Za-z]{2}$"
+          },
+          "label" : {
+            "type" : "string",
+            "example" : "Home",
+            "maxLength" : 50,
+            "minLength" : 0
+          },
+          "latitude" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 90.0,
+            "minimum" : -90.0
+          },
+          "line1" : {
+            "type" : "string",
+            "example" : "221B Baker Street",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "line2" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "longitude" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 180.0,
+            "minimum" : -180.0
+          },
+          "makeDefault" : {
+            "type" : "boolean",
+            "default" : false,
+            "description" : "Make this the default delivery address"
+          },
+          "postalCode" : {
+            "type" : "string",
+            "example" : "NW1 6XE",
+            "maxLength" : 20,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "city", "country", "label", "line1", "postalCode" ]
+      },
+      "AddressResponse" : {
+        "type" : "object",
+        "properties" : {
+          "city" : {
+            "type" : "string"
+          },
+          "country" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "isDefault" : {
+            "type" : "boolean"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "latitude" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "line1" : {
+            "type" : "string"
+          },
+          "line2" : {
+            "type" : "string"
+          },
+          "longitude" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "postalCode" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "AdminUserResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailVerified" : {
+            "type" : "boolean"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "lastLoginAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lockedUntil" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "CUSTOMER", "RESTAURANT_OWNER", "COURIER", "ADMIN" ]
+            }
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          }
+        }
+      },
+      "ChangeStatusRequest" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          }
+        },
+        "required" : [ "status" ]
+      },
+      "Jwt" : {
+        "type" : "object",
+        "properties" : {
+          "audience" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "claims" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "headers" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "issuer" : {
+            "type" : "string",
+            "format" : "url"
+          },
+          "notBefore" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "tokenValue" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "example" : "jane.doe@example.com",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "password" : {
+            "type" : "string",
+            "format" : "password",
+            "maxLength" : 128,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "email", "password" ]
+      },
+      "PageResponseAdminUserResponse" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminUserResponse"
+            }
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        }
+      },
+      "RegisterRequest" : {
+        "type" : "object",
+        "description" : "New account",
+        "properties" : {
+          "accountType" : {
+            "type" : [ "string", "null" ],
+            "description" : "Defaults to CUSTOMER. ADMIN cannot be self-assigned.",
+            "enum" : [ "CUSTOMER", "RESTAURANT_OWNER", "COURIER" ]
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "example" : "jane.doe@example.com",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "fullName" : {
+            "type" : "string",
+            "example" : "Jane Doe",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "password" : {
+            "type" : "string",
+            "format" : "password",
+            "description" : "12 to 128 characters. Passphrases are encouraged; no composition rules (NIST SP 800-63B).",
+            "example" : "correct horse battery staple",
+            "maxLength" : 128,
+            "minLength" : 12
+          }
+        },
+        "required" : [ "email", "fullName", "password" ]
+      },
+      "TokenResponse" : {
+        "type" : "object",
+        "description" : "Access token. The rotating refresh token is set as an HttpOnly cookie, never in the body.",
+        "properties" : {
+          "accessToken" : {
+            "type" : "string",
+            "description" : "RS256-signed JWT for the Authorization header"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresIn" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Seconds until the access token expires",
+            "example" : 900
+          },
+          "tokenType" : {
+            "type" : "string",
+            "example" : "Bearer"
+          }
+        }
+      },
+      "UpdateProfileRequest" : {
+        "type" : "object",
+        "description" : "Partial update: omitted (null) fields stay unchanged; an empty phone removes it",
+        "properties" : {
+          "fullName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : ".*\\S.*"
+          },
+          "phone" : {
+            "type" : "string",
+            "example" : "+919876543210",
+            "pattern" : "^\\+[1-9]\\d{6,14}$|^$"
+          }
+        }
+      },
+      "UserProfileResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailVerified" : {
+            "type" : "boolean"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "CUSTOMER", "RESTAURANT_OWNER", "COURIER", "ADMIN" ]
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  }
+}

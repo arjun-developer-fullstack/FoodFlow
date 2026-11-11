@@ -1,0 +1,22 @@
+# Test profile. Defines the variables referenced by application.yaml so that the configuration guard
+# passes. Connection details are replaced at runtime: Testcontainers @ServiceConnection (datasource,
+# Kafka) and a DynamicPropertyRegistrar (schema registry). No real credentials live here.
+USER_DB_URL: jdbc:postgresql://replaced-by-testcontainers:5432/user_db
+USER_DB_USERNAME: replaced-by-testcontainers
+USER_DB_PASSWORD: replaced-by-testcontainers
+KAFKA_BOOTSTRAP_SERVERS: replaced-by-testcontainers:9092
+SCHEMA_REGISTRY_URL: http://replaced-by-testcontainers/apis/registry/v3
+SCHEMA_REGISTRY_AUTO_REGISTER: true
+JWT_ISSUER: https://auth.foodflow.test
+OPENAPI_ENABLED: true
+
+foodflow:
+  auth:
+    keys:
+      allow-ephemeral: true
+  outbox:
+    poll-interval: 100ms
+
+logging:
+  level:
+    SECURITY: WARN

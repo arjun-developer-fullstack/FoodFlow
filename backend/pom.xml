@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Aggregator POM for local convenience ("build everything").
+  It does NOT act as a parent: each service inherits from foodflow-parent and is built,
+  versioned and deployed independently (CI builds a single service with -pl <service> -am).
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.foodflow</groupId>
+    <artifactId>foodflow-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>foodflow-backend</name>
+
+    <modules>
+        <module>foodflow-parent</module>
+        <module>libs/foodflow-event-contracts</module>
+        <module>libs/foodflow-platform-core</module>
+        <module>libs/foodflow-platform-starter</module>
+        <module>user-service</module>
+        <module>api-gateway</module>
+        <!-- Added phase by phase:
+        <module>restaurant-service</module>
+        <module>menu-service</module>
+        <module>cart-service</module>
+        <module>order-service</module>
+        <module>payment-service</module>
+        <module>delivery-service</module>
+        <module>notification-service</module>
+        -->
+    </modules>
+</project>

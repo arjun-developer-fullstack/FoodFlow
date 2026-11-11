@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "UserRegistered",
+  "namespace": "com.foodflow.events.user",
+  "doc": "A new user account was created. Topic: foodflow.user.events.v1, key: userId.",
+  "fields": [
+    { "name": "metadata", "type": "com.foodflow.events.common.EventMetadata" },
+    { "name": "userId", "type": "string", "doc": "User id (UUID)." },
+    { "name": "email", "type": "string", "doc": "Normalized (lower-case) e-mail address. PII: do not log." },
+    { "name": "fullName", "type": "string", "doc": "Display name. PII: do not log." },
+    {
+      "name": "roles",
+      "type": { "type": "array", "items": "string" },
+      "doc": "Granted roles (CUSTOMER, RESTAURANT_OWNER, COURIER, ADMIN). Strings, so new roles stay backward compatible."
+    },
+    {
+      "name": "registeredAt",
+      "type": { "type": "long", "logicalType": "timestamp-millis" }
+    }
+  ]
+}

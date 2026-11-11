@@ -1,0 +1,40 @@
+name: user-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/user-service/**
+      - backend/foodflow-parent/**
+      - backend/.mvn/**
+      - backend/mvnw
+      - backend/pom.xml
+      - backend/libs/**
+      - .github/workflows/user-service.yml
+      - .github/workflows/_reusable-java-service.yml
+  pull_request:
+    paths:
+      - backend/user-service/**
+      - backend/foodflow-parent/**
+      - backend/.mvn/**
+      - backend/mvnw
+      - backend/pom.xml
+      - backend/libs/**
+      - .github/workflows/user-service.yml
+      - .github/workflows/_reusable-java-service.yml
+  workflow_dispatch:
+
+concurrency:
+  group: user-service-${{ github.ref }}
+  # never cancel main: a half-finished run could leave image tags inconsistent
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  pipeline:
+    uses: ./.github/workflows/_reusable-java-service.yml
+    with:
+      service: user-service

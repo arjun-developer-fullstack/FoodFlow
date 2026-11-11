@@ -1,0 +1,46 @@
+{
+  "type": "record",
+  "name": "EventMetadata",
+  "namespace": "com.foodflow.events.common",
+  "doc": "Envelope carried by every FoodFlow domain event (CloudEvents-style attributes).",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "Globally unique event id (UUID). Consumers use it for idempotency."
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "doc": "Logical event name, e.g. UserRegistered."
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "doc": "Producing service, e.g. user-service."
+    },
+    {
+      "name": "occurredAt",
+      "type": { "type": "long", "logicalType": "timestamp-millis" },
+      "doc": "When the business fact happened (UTC)."
+    },
+    {
+      "name": "schemaVersion",
+      "type": "int",
+      "default": 1,
+      "doc": "Payload schema version, for consumer diagnostics."
+    },
+    {
+      "name": "correlationId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Correlation id of the request that caused the event."
+    },
+    {
+      "name": "traceparent",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "W3C trace context of the originating request."
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+# FoodFlow local infrastructure.
+#
+#   cd infra/docker && docker compose up -d
+#
+# Credentials are read from infra/docker/.env (git-ignored; create it from .env.example).
+# Compose refuses to start if one is missing. Every database/user mirrors the "database per
+# service" ownership model (docs/architecture/ARCHITECTURE.md §3); services never share credentials.
+#
+# Host ports (bound to 127.0.0.1 only: never expose these to the LAN)
+#   5432 PostgreSQL (+PostGIS)   27017 MongoDB     6379 Redis
+#   9092 Kafka                   8180  Apicurio Registry API   8181 Apicurio UI
+#   8190 Kafka UI                3000  Grafana     4317/4318 OTLP (gRPC/HTTP)
+# Service ports 8080-8088 are reserved for the FoodFlow apps (see README.md).
+
+name: foodflow
+
+services:
+
+  postgres:
+    image: postgis/postgis:17-3.7-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?set POSTGRES_ADMIN_USER in infra/docker/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD in infra/docker/.env}
+      POSTGRES_DB: postgres
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?set USER_DB_PASSWORD in infra/docker/.env}
+      RESTAURANT_DB_PASSWORD: ${RESTAURANT_DB_PASSWORD:?set RESTAURANT_DB_PASSWORD in infra/docker/.env}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in infra/docker/.env}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?set PAYMENT_DB_PASSWORD in infra/docker/.env}
+      DELIVERY_DB_PASSWORD: ${DELIVERY_DB_PASSWORD:?set DELIVERY_DB_PASSWORD in infra/docker/.env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Runs after the image's own 10_postgis.sh
+      - ./postgres/20-foodflow-init.sh:/docker-entrypoint-initdb.d/20-foodflow-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongodb:
+    image: mongo:8.0.34
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?set MONGO_ROOT_USER in infra/docker/.env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in infra/docker/.env}
+      MENU_DB_PASSWORD: ${MENU_DB_PASSWORD:?set MENU_DB_PASSWORD in infra/docker/.env}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set NOTIFICATION_DB_PASSWORD in infra/docker/.env}
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo/init-users.js:/docker-entrypoint-initdb.d/init-users.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.6-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.3.2
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      # Single-node KRaft (no ZooKeeper - Kafka 4.x)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk   # must be a base64-encoded 16-byte UUID
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Topics are explicit infrastructure, never created implicitly by a typo
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Without this the broker writes to /tmp/kafka-logs inside the container and the volume stays empty
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  kafka-init:
+    image: apache/kafka:4.3.2
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./kafka/create-topics.sh:/create-topics.sh:ro
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    environment:
+      BOOTSTRAP: kafka:29092
+    restart: "no"
+
+  schema-registry:
+    image: apicurio/apicurio-registry:3.3.4
+    ports:
+      - "127.0.0.1:8180:8080"
+    environment:
+      # Local default: in-memory storage. Cloud environments use a persistent (SQL/KafkaSQL) store.
+      QUARKUS_HTTP_CORS_ORIGINS: "*"
+      APICURIO_REST_DELETION_ARTIFACT_ENABLED: "true"
+      APICURIO_REST_DELETION_ARTIFACT_VERSION_ENABLED: "true"
+
+  schema-registry-ui:
+    image: apicurio/apicurio-registry-ui:3.3.4
+    ports:
+      - "127.0.0.1:8181:8080"
+    environment:
+      REGISTRY_API_URL: http://localhost:8180/apis/registry/v3
+    depends_on:
+      - schema-registry
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.5.0
+    ports:
+      - "127.0.0.1:8190:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: foodflow-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # Grafana + Prometheus + Loki + Tempo + OpenTelemetry Collector in one container (dev only).
+  # Services export metrics, traces and logs via OTLP to localhost:4317/4318.
+  observability:
+    image: grafana/otel-lgtm:0.40.0
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - lgtm-data:/data
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:
+  kafka-data:
+  lgtm-data:

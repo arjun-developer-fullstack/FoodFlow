@@ -1,0 +1,51 @@
+# Local development profile: SPRING_PROFILES_ACTIVE=local
+#
+# Targets the docker compose stack in infra/docker. Credentials are NOT stored here: they are read
+# from infra/docker/.env (git-ignored; create it from .env.example). The path is relative to the
+# module directory, which is the working directory for `mvnw spring-boot:run` and IntelliJ.
+
+spring:
+  config:
+    import: optional:file:../../infra/docker/.env[.properties]
+
+# Local values for the variables referenced by application.yaml.
+#
+# They are defined as variables (not by overriding spring.datasource.url etc.) because the
+# configuration guard checks every property source, including application.yaml itself: each
+# ${VARIABLE} there must resolve. Real environment variables still take precedence over these.
+#
+# USER_DB_PASSWORD is deliberately NOT defined here. It is a secret and comes from
+# infra/docker/.env; without it startup fails fast and names the missing variable.
+USER_DB_URL: jdbc:postgresql://localhost:5432/user_db
+USER_DB_USERNAME: user_svc
+KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+SCHEMA_REGISTRY_URL: http://localhost:8180/apis/registry/v3
+# Production registers schemas from CI; locally the serializer registers them on first use
+SCHEMA_REGISTRY_AUTO_REGISTER: true
+# Tokens are issued for the public entry point (the API gateway)
+JWT_ISSUER: http://localhost:8080
+OPENAPI_ENABLED: true
+
+server:
+  # Reachable from this machine only, never from the network (the compose ports are bound the same way).
+  # IPv4 loopback: JVM clients resolve "localhost" to 127.0.0.1 first; Node falls back to it automatically.
+  address: 127.0.0.1
+
+foodflow:
+  auth:
+    cookie:
+      # Browsers accept Secure cookies on http://localhost, but plain-HTTP tools may not
+      secure: false
+    keys:
+      allow-ephemeral: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    export:
+      enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: true

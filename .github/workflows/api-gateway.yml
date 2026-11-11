@@ -1,0 +1,40 @@
+name: api-gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/api-gateway/**
+      - backend/foodflow-parent/**
+      - backend/.mvn/**
+      - backend/mvnw
+      - backend/pom.xml
+      - backend/libs/foodflow-platform-core/**
+      - .github/workflows/api-gateway.yml
+      - .github/workflows/_reusable-java-service.yml
+  pull_request:
+    paths:
+      - backend/api-gateway/**
+      - backend/foodflow-parent/**
+      - backend/.mvn/**
+      - backend/mvnw
+      - backend/pom.xml
+      - backend/libs/foodflow-platform-core/**
+      - .github/workflows/api-gateway.yml
+      - .github/workflows/_reusable-java-service.yml
+  workflow_dispatch:
+
+concurrency:
+  group: api-gateway-${{ github.ref }}
+  # never cancel main: a half-finished run could leave image tags inconsistent
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  pipeline:
+    uses: ./.github/workflows/_reusable-java-service.yml
+    with:
+      service: api-gateway

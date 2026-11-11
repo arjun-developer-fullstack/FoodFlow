@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Supply-chain hardening: dependency lifecycle scripts are denied unless explicitly allowed.
+# msw's postinstall only copies the browser service worker; tests use msw/node, so it is denied.
+allowBuilds:
+  msw: false
+
+# pnpm blocks very recently published versions by default (minimum release age). These pinned,
+# verified versions were published inside that window; pnpm recorded them on first install.
+minimumReleaseAgeExclude:
+  - '@tanstack/query-core@5.107.1'
+  - '@tanstack/react-query@5.107.1'
+  - zustand@5.1.0

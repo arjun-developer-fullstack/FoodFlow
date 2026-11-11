@@ -1,0 +1,17 @@
+{
+  "name": "foodflow-frontend",
+  "private": true,
+  "description": "FoodFlow web applications (pnpm workspace)",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/pnpm.mjs --filter @foodflow/customer-web dev",
+    "build": "node scripts/pnpm.mjs -r build",
+    "test": "node scripts/pnpm.mjs -r test",
+    "lint": "node scripts/pnpm.mjs -r lint",
+    "typecheck": "node scripts/pnpm.mjs -r typecheck",
+    "verify": "node scripts/pnpm.mjs -r lint && node scripts/pnpm.mjs -r typecheck && node scripts/pnpm.mjs -r test && node scripts/pnpm.mjs -r build"
+  }
+}
