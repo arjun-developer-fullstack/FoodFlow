@@ -56,7 +56,7 @@
         <resilience4j.version>2.4.0</resilience4j.version>
         <archunit.version>1.5.1</archunit.version>
         <!-- Required by Spring Security's Argon2PasswordEncoder (not managed by Spring Boot) -->
-        <bouncycastle.version>1.86</bouncycastle.version>
+        <bouncycastle.version>1.87</bouncycastle.version>
         <avro.version>1.12.2</avro.version>
         <apicurio-registry.version>3.3.4</apicurio-registry.version>
 
