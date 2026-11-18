@@ -17,7 +17,7 @@ name: foodflow
 services:
 
   postgres:
-    image: postgis/postgis:17-3.7-alpine
+    image: postgis/postgis:18-3.6-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_ADMIN_USER:?set POSTGRES_ADMIN_USER in infra/docker/.env}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD in infra/docker/.env}
