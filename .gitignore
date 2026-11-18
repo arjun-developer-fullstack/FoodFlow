@@ -50,12 +50,41 @@ coverage/
 *.key
 *.p12
 *.jks
+*.pfx
+*.p8
+*.crt
+*.keystore
+*.truststore
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*.env
+secrets/
+credentials*.json
 
 # ---------- Local tooling ----------
 **/.claude/settings.local.json
 .mcp.json
 .DS_Store
 Thumbs.db
+
+# ---------- Stray, temporary and backup files ----------
+*.lst
+*.bak
+*.tmp
+*.orig
+*.swp
+*~
+hs_err_pid*
+replay_pid*
+npm-debug.log*
+pnpm-debug.log*
+logs/
+*.dump
+*.sql.gz
+*.zip
+*.tar.gz
+*.7z
 
 # ---------- Private local notes (never publish) ----------
 docs/private/

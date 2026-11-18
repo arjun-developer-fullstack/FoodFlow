@@ -1,7 +1,11 @@
 # FoodFlow
 
 Enterprise food ordering and delivery platform: Java 21 / Spring Boot 4.1 microservices,
-Kafka event-driven communication, React + TypeScript frontends, deployed to AWS EKS.
+Kafka event-driven communication, React + TypeScript frontends, designed for deployment to AWS EKS.
+
+> **Status:** Milestone M0. Implemented so far: API gateway, user-service (registration, login,
+> JWT issuing, refresh-token rotation, logout, profiles and addresses), shared platform libraries
+> and the customer web app's auth flow. The remaining services and the cloud deployment are planned.
 
 * Architecture: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
 * Decisions: [`docs/adr/`](docs/adr)
@@ -25,8 +29,8 @@ frontend/            pnpm workspace
   apps/customer-web/ React 19 + TypeScript customer app (Vite dev server :5173)
 infra/
   docker/            Local infrastructure (docker compose)
-  k8s/ terraform/    Cloud deployment (Phase 7)
-docs/                Architecture, ADRs, OpenAPI & AsyncAPI contracts
+  k8s/ terraform/    Cloud deployment (planned, Phase 7; not yet in the repository)
+docs/                Architecture, ADRs, OpenAPI contracts (AsyncAPI planned)
 ```
 
 ## Prerequisites
@@ -56,8 +60,9 @@ cd backend
 
 # 5. Run the customer web app (proxies /api to the gateway on :8080)
 cd ../frontend
-pnpm install
+pnpm install                                     # without `corepack enable`: corepack pnpm install
 pnpm dev                                         # http://localhost:5173
+pnpm verify                                      # lint, typecheck, tests and production build
 ```
 
 | Tool | URL |
