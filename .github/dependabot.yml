@@ -34,3 +34,10 @@ updates:
     directory: /infra/docker
     schedule:
       interval: monthly
+    ignore:
+      # A PostgreSQL major upgrade (17 -> 18) cannot be a tag bump: the on-disk format changes
+      # (needs pg_upgrade or dump/restore), the 18+ images move PGDATA to /var/lib/postgresql/18/docker
+      # (our volume mounts /var/lib/postgresql/data), and the PostGIS extension version must not go
+      # backwards. Do it as a planned migration; PostGIS/patch updates within PostgreSQL 17 still arrive.
+      - dependency-name: "postgis/postgis"
+        update-types: ["version-update:semver-major"]
