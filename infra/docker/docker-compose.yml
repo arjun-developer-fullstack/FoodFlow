@@ -146,7 +146,7 @@ services:
   # Grafana + Prometheus + Loki + Tempo + OpenTelemetry Collector in one container (dev only).
   # Services export metrics, traces and logs via OTLP to localhost:4317/4318.
   observability:
-    image: grafana/otel-lgtm:0.40.0
+    image: grafana/otel-lgtm:0.41.0
     ports:
       - "127.0.0.1:3000:3000"
       - "127.0.0.1:4317:4317"
