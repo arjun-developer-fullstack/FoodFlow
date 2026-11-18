@@ -40,7 +40,7 @@ services:
       retries: 20
 
   mongodb:
-    image: mongo:8.0.34
+    image: mongo:9.0.4
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?set MONGO_ROOT_USER in infra/docker/.env}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in infra/docker/.env}
