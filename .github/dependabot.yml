@@ -16,6 +16,13 @@ updates:
     groups:
       react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+    ignore:
+      # typescript-eslint (8.73.0, latest as of 2026-11) supports only typescript <6.1.0 and fails
+      # hard on TS 7.0. Stay on TS 6.x (patch updates still allowed) until a typescript-eslint
+      # release widens its typescript peer range; then remove this rule and upgrade both together.
+      # Tracking: https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     open-pull-requests-limit: 10
 
   - package-ecosystem: github-actions
