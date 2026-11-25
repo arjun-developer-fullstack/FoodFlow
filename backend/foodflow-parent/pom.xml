@@ -58,7 +58,7 @@
         <!-- Required by Spring Security's Argon2PasswordEncoder (not managed by Spring Boot) -->
         <bouncycastle.version>1.86</bouncycastle.version>
         <avro.version>1.12.2</avro.version>
-        <apicurio-registry.version>3.3.4</apicurio-registry.version>
+        <apicurio-registry.version>3.3.5</apicurio-registry.version>
 
         <!-- Plugins -->
         <jacoco.version>0.8.16</jacoco.version>
