@@ -52,7 +52,7 @@
         <spring-cloud.version>2025.1.4</spring-cloud.version>
 
         <!-- Third-party (not managed by Spring Boot) -->
-        <springdoc.version>3.2.0</springdoc.version>
+        <springdoc.version>3.2.1</springdoc.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <archunit.version>1.5.1</archunit.version>
         <!-- Required by Spring Security's Argon2PasswordEncoder (not managed by Spring Boot) -->
